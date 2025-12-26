@@ -1,7 +1,6 @@
 import os
 import psycopg2
 from psycopg2.extras import RealDictCursor
-from urllib.parse import urlparse
 
 # Cloud Connection String (Populated from Env)
 DATABASE_URL = os.environ.get("DATABASE_URL")
@@ -66,4 +65,3 @@ def get_conn(cfg):
         # Use provided credentials, ignore 'type' and 'schema' keys
         db_args = {k: v for k, v in cfg.items() if k not in ["type", "schema"]}
         return psycopg2.connect(**db_args, cursor_factory=RealDictCursor)
-

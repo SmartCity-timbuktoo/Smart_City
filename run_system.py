@@ -43,7 +43,7 @@ def wait_for_service(port, name, timeout=30):
 
 def cleanup(signum, frame):
     """Graceful shutdown handler."""
-    log("\nShutting down services...", index=RED)
+    log("\nShutting down services...", color=RED)
     for p in processes:
         if os.name == 'nt':
             # Windows requires stronger kill signal for subprocess groups
@@ -54,12 +54,36 @@ def cleanup(signum, frame):
     log("All services stopped. Goodbye!", CYAN)
     sys.exit(0)
 
+def kill_process_on_port(port):
+    """Find and kill process listening on a specific port (Windows)."""
+    try:
+        # Find PID
+        cmd = f"netstat -ano | findstr :{port}"
+        output = subprocess.check_output(cmd, shell=True).decode()
+        lines = output.strip().split('\n')
+        for line in lines:
+            if "LISTENING" in line:
+                parts = line.split()
+                pid = parts[-1]
+                log(f"Killing zombie process {pid} on port {port}...", RED)
+                subprocess.call(['taskkill', '/F', '/PID', pid], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    except subprocess.CalledProcessError:
+        pass # No process found
+    except Exception as e:
+        log(f"Warning: Failed to cleanup port {port}: {e}", RED)
+
 def main():
     log("Initializing Addis-Sync Multi-App System...", CYAN)
     
     # Register signal handlers
     signal.signal(signal.SIGINT, cleanup)
     signal.signal(signal.SIGTERM, cleanup)
+
+    # 0. Cleanup Ports
+    log("Cleaning up ports 8501 and 8502...")
+    kill_process_on_port(CITIZEN_APP_PORT)
+    kill_process_on_port(ADMIN_APP_PORT)
+    time.sleep(2)
 
     # 1. Launch Citizen App
     log(f"Launching Citizen Interface on Port {CITIZEN_APP_PORT}...")

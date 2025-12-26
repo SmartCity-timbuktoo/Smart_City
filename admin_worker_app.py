@@ -2,6 +2,11 @@
 import streamlit as st
 import pandas as pd
 import psycopg2
+from dotenv import load_dotenv
+
+# Load env vars for DB config
+load_dotenv()
+
 from smart_city_agent.mcp_server.db import (
     get_conn,
     EMERGENCY_DB,

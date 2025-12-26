@@ -20,5 +20,6 @@ mcp[cli]>=1.25.0
 # Environment
 python-dotenv>=1.0.0
 
-# Testing (optional)
-pytest>=8.0.0
+
+# AI Client
+openai>=1.0.0

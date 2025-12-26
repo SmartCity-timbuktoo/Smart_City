@@ -8,7 +8,7 @@ Supports both in-memory (development) and database-backed (production) sessions.
 import uuid
 from datetime import datetime, timedelta
 from typing import Dict, Optional, Any
-from .local_runner import Session
+from .local_runner import Session, InMemorySessionService
 
 
 class AddisSessionService(InMemorySessionService):

@@ -47,6 +47,9 @@ class InMemorySessionService:
     def __init__(self):
         pass
 
+    def get_or_create(self, session_id: str, user_id: str = None) -> Session:
+        return get_session(session_id)
+
 SESSION_STORE: Dict[str, Session] = {}
 
 def get_session(session_id: str) -> Session:
@@ -129,6 +132,18 @@ class AdkApp:
             
         full_system_instruction = f"{self.root_agent.instruction}\n\n{state_context}"
         
+        # Append Sub-Agent Instructions to give context on how to use their tools
+        full_system_instruction += "\n\n### SPECIALIST AGENT CAPABILITIES:\n"
+        
+        def collect_instructions(agt):
+            instructions = ""
+            for sub in agt.sub_agents:
+                instructions += f"\n--- {sub.name.upper()} ---\n{sub.instruction}\n"
+                instructions += collect_instructions(sub)
+            return instructions
+            
+        full_system_instruction += collect_instructions(self.root_agent)
+        
         # 2. History
         # We rely on the client's chat capability or manual history
         # Simplify: Just send instruction + history + prompt
@@ -179,45 +194,82 @@ class AdkApp:
         
         response = chat.send_message(prompt)
         
-        # 5. Handle Tool Calls (Simple Loop)
-        # Using automatic function calling if supported by SDK, otherwise manual loop.
-        # The 'google-genai' SDK usually handles this if configured, or returns FunctionCall parts.
-        
-        # For this implementation, we rely on the SDK's auto-function-calling if available?
-        # Actually v0.3.0 might require explicit loop or `automatic_function_calling=True`.
-        # Let's assume basic text response for now to verify connectivity, 
-        # OR handle the parts.
-        
+        # 5. Handle Tool Calls (Agentic Loop)
         final_text = ""
+        max_turns = 10
+        turn_count = 0
         
-        # Check parts
-        if response.candidates and response.candidates[0].content.parts:
+        while turn_count < max_turns:
+            turn_count += 1
+            
+            # Check for function calls in the CURRENT response
+            # valid_response = response.candidates[0].content
+            if not response.candidates or not response.candidates[0].content.parts:
+                break
+                
+            has_tool_call = False
             for part in response.candidates[0].content.parts:
-                if part.text:
-                    final_text += part.text
-                elif part.function_call:
-                    # Execute tool
+                if part.function_call:
+                    has_tool_call = True
                     fn_name = part.function_call.name
                     fn_args = part.function_call.args
                     
+                    print(f"🤖 Agent calling tool: {fn_name}")
+                    
                     if fn_name in TOOL_REGISTRY:
-                        # Call real function
                         try:
+                            # Execute real function
                             result = TOOL_REGISTRY[fn_name](**fn_args)
-                            # Feed back to model
+                            print(f"🔧 Tool Result: {str(result)[:100]}...")
+                            
+                            # Send result back to model
+                            # We must send immediate response for each tool call in the same turn?
+                            # Standard Gemini chat: User -> Model(Call) -> User(Result) -> Model(Next)
                             response = chat.send_message(
                                 types.Part.from_function_response(
                                     name=fn_name,
                                     response={"result": result}
                                 )
                             )
-                            # Get new response
-                            if response.text:
-                                final_text += response.text
+                            # The 'response' is now the NEXT model turn (could be text or another call)
+                            # We break the inner loop to process the new 'response' object in the outer while loop
+                            break 
                         except Exception as e:
-                            final_text += f"\n[Tool Error: {str(e)}]"
-        else:
-             final_text = response.text or "Error: No response generated."
+                            print(f"❌ Tool Error: {e}")
+                            response = chat.send_message(
+                                types.Part.from_function_response(
+                                    name=fn_name,
+                                    response={"error": str(e)}
+                                )
+                            )
+                            break
+                    else:
+                        print(f"⚠️ Tool not found: {fn_name}")
+                        response = chat.send_message(
+                            types.Part.from_function_response(
+                                name=fn_name,
+                                response={"error": "Tool function not found in registry."}
+                            )
+                        )
+                        break
+
+            # If no tool call was found in this response, it interprets as final text?
+            # Or if we processed a tool call, we 'break' inner loop to restart outer loop with new response.
+            # If we iterated all parts and found NO tool calls, then we extract text and finish.
+            
+            if has_tool_call:
+                continue # Loop again with the new 'response' obtained from send_message
+            
+            # No tool calls - Append text and Exit
+            for part in response.candidates[0].content.parts:
+                if part.text:
+                    final_text += part.text
+            break
+            
+        if not final_text and turn_count >= max_turns:
+            final_text = "⚠️ Agent Error: Maximum tool execution limit reached." 
+        elif not final_text:
+             final_text = "I processed that, but have no text response."
 
         # Update Session
         session.history.append(types.Content(role="user", parts=[types.Part.from_text(text=prompt)]))

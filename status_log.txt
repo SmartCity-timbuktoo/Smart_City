@@ -1,2 +1,2 @@
-STATUS: CRITICAL_IMPORT_ERROR
-Error: No module named 'vertexai.agent_engines'
+STATUS: SUCCESS
+AdkApp initialized

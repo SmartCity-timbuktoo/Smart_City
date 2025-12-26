@@ -1,0 +1,10 @@
+STARTING VERIFICATION
+DOTENV loaded
+✅ Local Runner Imported
+✅ Root Agent Loaded: customer_service (Model: gemini-2.5-flash-lite)
+✅ LocalRunner: Loaded MCP Servers. Registry size: 15
+✅ AdkApp Initialized
+✅ Tool Registry Size: 15
+📋 Registered Tools: ['find_closest_emergency_office', 'create_emergency_ticket', 'get_emergency_ticket_status', 'get_power_office_by_woreda', 'create_power_ticket', 'get_power_ticket_status', 'get_sanitation_office_by_woreda', 'create_sanitation_ticket', 'get_sanitation_ticket_status', 'get_infrastructure_office_by_woreda', 'create_infrastructure_ticket', 'get_infrastructure_ticket_status', 'get_utility_office_by_woreda', 'create_utility_ticket', 'get_ticket_status']
+Running query 'What can you help me with?'...
+❌ Run Failed: 403 PERMISSION_DENIED. {'error': {'code': 403, 'message': 'Your API key was reported as leaked. Please use another API key.', 'status': 'PERMISSION_DENIED'}}

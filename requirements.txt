@@ -1,0 +1,24 @@
+# Addis-Sync Requirements
+# Install with: uv pip install -r requirements.txt
+
+# Core ADK - must be installed from GitHub (PyPI version is a stub)
+google-adk @ git+https://github.com/google/adk-python.git@main
+
+# Google AI
+google-generativeai>=0.8.3
+google-genai>=1.0.0
+
+# Database
+psycopg2-binary>=2.9.9
+
+# Web Framework
+streamlit>=1.52.2
+
+# MCP
+mcp[cli]>=1.25.0
+
+# Environment
+python-dotenv>=1.0.0
+
+# Testing (optional)
+pytest>=8.0.0
